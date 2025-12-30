@@ -168,11 +168,11 @@
             const form = ref({
                 sourceUrl: '',
                 clientType: 'clash',
-                // 长链转换后端 (你的 Zeabur 地址)
+                // 1. 长链转换后端
                 backendUrl: 'https://lychee.zeabur.app', 
-                // 短链生成后端 (使用刚才的 api.v1.mk)
-                shortBackendUrl: 'https://api.v1.mk',
-                // 默认选中你的自定义配置
+                // 2. 短链生成后端 (已更新)
+                shortBackendUrl: 'https://shorturl.litchi.de5.net',
+                // 3. 默认远程配置
                 remoteConfig: 'https://raw.githubusercontent.com/LycheeGuo/speedtest/refs/heads/main/lychee.ini'
             });
 
@@ -203,29 +203,35 @@
                 shortUrlResult.value = '';
 
                 try {
-                    // 使用 api.v1.mk 的短链接口 (GET /short?url=xxx)
-                    // 注意：这里使用 fetch 直接请求，可能会遇到 CORS 问题。
-                    // 但 api.v1.mk 通常允许跨域。如果遇到问题，可能需要后端代理。
+                    // 处理短链后端地址，去除末尾斜杠
                     const shortBackend = form.value.shortBackendUrl.replace(/\/$/, '');
+                    
+                    // 这里假设你的短链服务接口格式是 GET /short?url=xxx
+                    // 如果你的短链服务使用的是 POST 方式或其他参数名，这里可能需要调整
                     const target = `${shortBackend}/short?url=${encodeURIComponent(generatedUrl.value)}`;
                     
                     const res = await fetch(target);
                     const data = await res.json();
 
+                    // 兼容常见的返回格式 Code:1 + ShortUrl 或 code:0 + data
                     if (data.Code === 1 && data.ShortUrl) {
                         shortUrlResult.value = data.ShortUrl;
+                    } else if (data.code === 0 && data.data) {
+                        // 兼容 MyUrls 某些版本的返回
+                        shortUrlResult.value = data.data;
                     } else {
-                        alert('短链生成失败: ' + (data.Message || '未知错误'));
+                        // 如果都没有匹配，尝试直接显示整个 JSON 或报错
+                        console.log('短链返回数据:', data);
+                        alert('短链生成可能失败，请查看控制台日志或检查返回格式');
                     }
                 } catch (e) {
                     console.error(e);
-                    alert('请求短链服务失败，请检查网络或更换短链后端');
+                    alert('请求短链服务失败，请检查网络或跨域(CORS)设置');
                 } finally {
                     loadingShort.value = false;
                 }
             };
 
-            // 复制文本工具函数
             const copyText = async (text) => {
                 if (!text) return;
                 try {
