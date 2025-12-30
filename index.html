@@ -21,7 +21,7 @@
         
         <div class="text-center">
             <h2 class="mt-2 text-3xl font-extrabold text-gray-900">
-                <i class="fa-solid fa-layer-group text-indigo-500"></i> 订阅转换 Pro
+                <i class="fa-solid fa-rocket text-indigo-500"></i> 订阅转换 Pro
             </h2>
             <p class="mt-2 text-sm text-gray-500">Lychee 定制版</p>
         </div>
@@ -37,14 +37,22 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">目标客户端</label>
                     <select v-model="form.clientType" class="block w-full p-2.5 border border-gray-300 rounded-lg sm:text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="clash">Clash</option>
-                        <option value="clashr">ClashR</option>
-                        <option value="v2ray">V2Ray</option>
-                        <option value="quan">Quantumult</option>
-                        <option value="quanx">Quantumult X</option>
-                        <option value="surfboard">Surfboard</option>
-                        <option value="loon">Loon</option>
-                        <option value="singbox">Sing-box</option>
+                        <optgroup label="主流客户端">
+                            <option value="clash">Clash (推荐)</option>
+                            <option value="mixed">Shadowrocket (混合)</option>
+                            <option value="quanx">Quantumult X</option>
+                            <option value="singbox">Sing-box</option>
+                        </optgroup>
+                        <optgroup label="其他客户端">
+                            <option value="clashr">ClashR</option>
+                            <option value="v2ray">V2Ray (纯节点)</option>
+                            <option value="trojan">Trojan</option>
+                            <option value="quan">Quantumult</option>
+                            <option value="surfboard">Surfboard</option>
+                            <option value="loon">Loon</option>
+                            <option value="ss">Shadowsocks</option>
+                            <option value="ssd">SSD</option>
+                        </optgroup>
                     </select>
                 </div>
                 <div>
@@ -53,14 +61,15 @@
                         <option value="https://raw.githubusercontent.com/LycheeGuo/speedtest/main/lychee.ini">Lychee 默认配置</option>
                         <option value="">不使用 (基础)</option>
                         <option value="https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini">ACL4SSR Online</option>
+                        <option value="https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Mini.ini">ACL4SSR Mini</option>
                     </select>
                 </div>
             </div>
 
             <div class="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">高级筛选 (可选)</h3>
-                <input type="text" v-model="form.include" class="block w-full p-2 text-sm border border-gray-300 rounded-md" placeholder="Include: 保留节点的关键字或正则 (例如: 香港|SG)">
-                <input type="text" v-model="form.exclude" class="block w-full p-2 text-sm border border-gray-300 rounded-md" placeholder="Exclude: 排除节点的关键字或正则 (例如: 剩余流量|过期)">
+                <input type="text" v-model="form.include" class="block w-full p-2 text-sm border border-gray-300 rounded-md" placeholder="Include: 保留节点的关键字 (如: 香港|SG)">
+                <input type="text" v-model="form.exclude" class="block w-full p-2 text-sm border border-gray-300 rounded-md" placeholder="Exclude: 排除节点的关键字 (如: 过期|剩余)">
                 
                 <div class="flex flex-wrap gap-x-6 gap-y-3 pt-2">
                     <label class="flex items-center space-x-2 cursor-pointer select-none">
@@ -77,7 +86,7 @@
                     </label>
                     <label class="flex items-center space-x-2 cursor-pointer select-none">
                         <input type="checkbox" v-model="form.scv" class="rounded text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-sm text-gray-700">关闭证书检查</span>
+                        <span class="text-sm text-gray-700">跳过证书</span>
                     </label>
                     <label class="flex items-center space-x-2 cursor-pointer select-none">
                         <input type="checkbox" v-model="form.nodeList" class="rounded text-indigo-600 focus:ring-indigo-500">
@@ -139,20 +148,18 @@
             
             const form = ref({
                 sourceUrl: '',
-                clientType: 'clash',
+                clientType: 'clash', // 默认还是 Clash，因为 Shadowrocket 对 Clash 支持也很好
                 backendUrl: 'https://lychee.zeabur.app', 
                 shortBackendUrl: 'https://shorturl.litchi.de5.net',
-                // 已修正：去掉了 refs/heads，保证链接有效
                 remoteConfig: 'https://raw.githubusercontent.com/LycheeGuo/speedtest/main/lychee.ini',
                 
-                // 新增的功能参数
                 include: '',
                 exclude: '',
-                emoji: true,      // 默认开启 Emoji
-                udp: false,       // 默认关闭 UDP
-                sort: false,      // 默认关闭排序
-                scv: false,       // 默认关闭“跳过证书验证”
-                nodeList: false   // 默认关闭 Node List
+                emoji: true,
+                udp: false,
+                sort: false,
+                scv: false,
+                nodeList: false
             });
 
             const generatedUrl = computed(() => {
@@ -163,20 +170,16 @@
                 
                 const params = new URLSearchParams();
                 params.append('target', form.value.clientType);
-                // 处理 URL 中的换行，转为 | 分隔
                 params.append('url', form.value.sourceUrl.replace(/[\n\r]+/g, '|'));
                 params.append('insert', 'false');
 
-                // 添加配置
                 if (form.value.remoteConfig) params.append('config', form.value.remoteConfig);
-
-                // 添加高级参数
                 if (form.value.include) params.append('include', form.value.include);
                 if (form.value.exclude) params.append('exclude', form.value.exclude);
                 params.append('emoji', form.value.emoji);
                 params.append('list', form.value.nodeList);
                 params.append('udp', form.value.udp);
-                params.append('scv', form.value.scv); // Skip Cert Verify
+                params.append('scv', form.value.scv);
                 params.append('sort', form.value.sort);
 
                 return `${backend}/sub?${params.toString()}`;
